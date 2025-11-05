@@ -1,0 +1,15 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Editor custom */
+.editor-container {
+  min-height: 400px;
+  padding: 1rem;
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Helvetica', sans-serif;
+  line-height: 1.5;
+  font-size: 16px;
+}
