@@ -1,23 +1,20 @@
-import React, { useState } from 'react'
-import Toolbar from './components/Toolbar.jsx'
-import Editor from './components/Editor.jsx'
+import React, { useState } from 'react';
+import Toolbar from './components/Toolbar.jsx';
+import './app.css';
 
 export default function App() {
-  // State for editor content
-  const [content, setContent] = useState('')
-
-  // Handle changes from Editor component
-  const handleContentChange = (newContent) => {
-    setContent(newContent)
-  }
+  const [fontSize, setFontSize] = useState('12');
 
   return (
     <div className="app-container">
-      <header>
-        <h1>Infraread Phase 2</h1>
-      </header>
-      <Toolbar />
-      <Editor content={content} onContentChange={handleContentChange} />
+      <Toolbar fontSize={fontSize} setFontSize={setFontSize} />
+      <div
+        className="editor"
+        contentEditable
+        style={{ fontSize: `${fontSize}pt` }}
+      >
+        Start writing here...
+      </div>
     </div>
-  )
+  );
 }
