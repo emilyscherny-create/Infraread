@@ -1,47 +1,25 @@
 import './Toolbar.css';
-import React from "react";
+import React from 'react';
 
-export default function Toolbar({ format, setFormat }) {
-  const handleChange = (field, value) => {
-    setFormat({ ...format, [field]: value });
-  };
-
+export default function Toolbar({ fontSize, setFontSize }) {
   return (
     <div className="toolbar">
-      <label>
-        Font&nbsp;
+      <div className="toolbar-left">
+        <span className="title">Infraread</span>
+      </div>
+      <div className="toolbar-right">
+        <label htmlFor="fontSize">Font Size:</label>
         <select
-          value={format.fontFamily}
-          onChange={(e) => handleChange("fontFamily", e.target.value)}
+          id="fontSize"
+          value={fontSize}
+          onChange={(e) => setFontSize(e.target.value)}
         >
-          <option value="serif">Serif</option>
-          <option value="sans-serif">Sans-serif</option>
-          <option value="monospace">Monospace</option>
+          <option value="12">12pt</option>
+          <option value="14">14pt</option>
+          <option value="16">16pt</option>
+          <option value="18">18pt</option>
         </select>
-      </label>
-
-      <label>
-        Size&nbsp;
-        <input
-          type="number"
-          min="8"
-          max="48"
-          value={format.fontSize}
-          onChange={(e) => handleChange("fontSize", parseInt(e.target.value))}
-        />
-      </label>
-
-      <label>
-        Spacing&nbsp;
-        <input
-          type="number"
-          step="0.1"
-          value={format.lineHeight}
-          onChange={(e) =>
-            handleChange("lineHeight", parseFloat(e.target.value))
-          }
-        />
-      </label>
+      </div>
     </div>
   );
 }
