@@ -1,16 +1,38 @@
 .app-container {
+  font-family: Arial, sans-serif;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  font-family: sans-serif;
 }
 
-.editor {
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: #222;
+  color: white;
+  padding: 10px 20px;
+}
+
+.editor-container {
   flex: 1;
-  padding: 1rem;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+textarea {
+  flex: 1;
+  resize: none;
+  padding: 10px;
+  font-size: 16px;
+  border-radius: 4px;
   border: 1px solid #ccc;
-  margin: 1rem;
-  border-radius: 6px;
-  overflow-y: auto;
-  background: #fff;
+  font-family: inherit;
+}
+
+.thermal-text {
+  font-size: 16px;
+  line-height: 1.5;
+  word-wrap: break-word;
 }
