@@ -1,52 +1,76 @@
-// src/App.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Toolbar from './components/Toolbar.jsx';
+import './components/Toolbar.css';
 import './app.css';
 
 function App() {
-  // State for toolbar options (example)
-  const [mode, setMode] = useState('normal');
-
-  // Placeholder for energy map data
+  // App state
   const [energyData, setEnergyData] = useState([]);
+  const [replayIndex, setReplayIndex] = useState(0);
+  const [isReplaying, setIsReplaying] = useState(false);
 
-  // Placeholder for replay state
-  const [replayActive, setReplayActive] = useState(false);
+  // Simulate fetching energy map data
+  useEffect(() => {
+    // Replace this with actual data fetch if needed
+    const sampleData = Array.from({ length: 10 }, (_, i) => ({
+      id: i,
+      energy: Math.floor(Math.random() * 100),
+    }));
+    setEnergyData(sampleData);
+  }, []);
 
-  // Handlers for toolbar buttons
-  const handleModeChange = (newMode) => {
-    setMode(newMode);
-  };
+  // Replay functionality
+  useEffect(() => {
+    let interval;
+    if (isReplaying) {
+      interval = setInterval(() => {
+        setReplayIndex((prev) => (prev + 1) % energyData.length);
+      }, 1000); // advance every 1s
+    } else if (!isReplaying && interval) {
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [isReplaying, energyData.length]);
 
-  const toggleReplay = () => {
-    setReplayActive((prev) => !prev);
+  // Toggle replay
+  const handleReplayToggle = () => {
+    setIsReplaying(!isReplaying);
   };
 
   return (
     <div className="app-container">
-      {/* Toolbar at top */}
-      <Toolbar 
-        currentMode={mode} 
-        onModeChange={handleModeChange} 
-        replayActive={replayActive} 
-        onReplayToggle={toggleReplay} 
-      />
+      {/* Toolbar & App Title */}
+      <header className="app-header">
+        <h1 className="app-title">
+          Infra<span className="title-accent">read</span>
+        </h1>
+        <Toolbar />
+      </header>
 
-      {/* Main app area */}
-      <div className="workspace">
-        {/* Energy Map placeholder */}
-        <div className="energy-map">
-          {energyData.length === 0 
-            ? <p>Energy map will display here</p> 
-            : <p>Energy map rendering...</p>
-          }
+      {/* Energy Map */}
+      <section className="energy-map">
+        <h2>Energy Map</h2>
+        <div className="energy-grid">
+          {energyData.map((item, index) => (
+            <div
+              key={item.id}
+              className={`energy-cell ${
+                index === replayIndex ? 'highlight' : ''
+              }`}
+              style={{ background: `rgba(255, 165, 0, ${item.energy / 100})` }}
+            >
+              {item.energy}
+            </div>
+          ))}
         </div>
+      </section>
 
-        {/* Replay placeholder */}
-        <div className="replay-panel">
-          {replayActive ? <p>Replay in progress...</p> : <p>Replay stopped</p>}
-        </div>
-      </div>
+      {/* Replay Controls */}
+      <section className="replay-controls">
+        <button onClick={handleReplayToggle}>
+          {isReplaying ? 'Pause Replay' : 'Start Replay'}
+        </button>
+      </section>
     </div>
   );
 }
