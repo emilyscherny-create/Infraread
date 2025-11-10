@@ -1,76 +1,98 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Toolbar from './components/Toolbar.jsx';
-import './components/Toolbar.css';
 import './app.css';
 
 function App() {
-  // App state
-  const [energyData, setEnergyData] = useState([]);
-  const [replayIndex, setReplayIndex] = useState(0);
-  const [isReplaying, setIsReplaying] = useState(false);
+  // State for the writing area
+  const [content, setContent] = useState('');
+  const textareaRef = useRef(null);
 
-  // Simulate fetching energy map data
+  // State for energy map (example: random values for now)
+  const [energyData, setEnergyData] = useState([]);
+  const [isReplaying, setIsReplaying] = useState(false);
+  const [replayIndex, setReplayIndex] = useState(0);
+
   useEffect(() => {
-    // Replace this with actual data fetch if needed
-    const sampleData = Array.from({ length: 10 }, (_, i) => ({
-      id: i,
-      energy: Math.floor(Math.random() * 100),
-    }));
-    setEnergyData(sampleData);
+    // Generate dummy energy data
+    const initialData = Array.from({ length: 50 }, () => Math.floor(Math.random() * 100));
+    setEnergyData(initialData);
   }, []);
 
-  // Replay functionality
+  // Replay logic
   useEffect(() => {
-    let interval;
-    if (isReplaying) {
-      interval = setInterval(() => {
-        setReplayIndex((prev) => (prev + 1) % energyData.length);
-      }, 1000); // advance every 1s
-    } else if (!isReplaying && interval) {
-      clearInterval(interval);
-    }
-    return () => clearInterval(interval);
-  }, [isReplaying, energyData.length]);
+    if (!isReplaying) return;
 
-  // Toggle replay
-  const handleReplayToggle = () => {
-    setIsReplaying(!isReplaying);
+    const interval = setInterval(() => {
+      setReplayIndex((prev) => {
+        if (prev + 1 >= energyData.length) {
+          clearInterval(interval);
+          setIsReplaying(false);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 200); // 200ms per step
+
+    return () => clearInterval(interval);
+  }, [isReplaying, energyData]);
+
+  const handleTextareaChange = (e) => setContent(e.target.value);
+
+  const handleReplay = () => {
+    setReplayIndex(0);
+    setIsReplaying(true);
   };
 
   return (
     <div className="app-container">
-      {/* Toolbar & App Title */}
+      {/* Header with title */}
       <header className="app-header">
         <h1 className="app-title">
-          Infra<span className="title-accent">read</span>
+          Infra<span className="highlight-orange">read</span>
         </h1>
         <Toolbar />
       </header>
 
-      {/* Energy Map */}
-      <section className="energy-map">
-        <h2>Energy Map</h2>
-        <div className="energy-grid">
-          {energyData.map((item, index) => (
-            <div
-              key={item.id}
-              className={`energy-cell ${
-                index === replayIndex ? 'highlight' : ''
-              }`}
-              style={{ background: `rgba(255, 165, 0, ${item.energy / 100})` }}
-            >
-              {item.energy}
-            </div>
-          ))}
-        </div>
-      </section>
+      {/* Main content area */}
+      <main className="app-main">
+        {/* Writing area */}
+        <section className="writing-area">
+          <textarea
+            ref={textareaRef}
+            value={content}
+            onChange={handleTextareaChange}
+            placeholder="Start writing..."
+          />
+        </section>
 
-      {/* Replay Controls */}
-      <section className="replay-controls">
-        <button onClick={handleReplayToggle}>
-          {isReplaying ? 'Pause Replay' : 'Start Replay'}
-        </button>
-      </section>
+        {/* Side panel for Phase 3 features */}
+        <aside className="side-panel">
+          {/* Energy map */}
+          <div className="energy-map">
+            <h2>Energy Map</h2>
+            <div className="energy-bars">
+              {energyData.map((value, idx) => (
+                <div
+                  key={idx}
+                  className="energy-bar"
+                  style={{
+                    height: `${value}%`,
+                    background: idx <= replayIndex ? 'orange' : 'lightgray',
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Replay controls */}
+          <div className="replay-controls">
+            <h2>Replay</h2>
+            <button onClick={handleReplay} disabled={isReplaying}>
+              {isReplaying ? 'Replaying...' : 'Start Replay'}
+            </button>
+          </div>
+        </aside>
+      </main>
     </div>
   );
 }
