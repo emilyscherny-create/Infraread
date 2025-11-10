@@ -7,7 +7,10 @@ export default function App() {
 
   return (
     <div className="app-container">
+      {/* Toolbar at top */}
       <Toolbar fontSize={fontSize} setFontSize={setFontSize} />
+
+      {/* Editable writing area */}
       <div
         className="editor"
         contentEditable
