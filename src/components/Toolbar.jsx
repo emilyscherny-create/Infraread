@@ -1,3 +1,4 @@
+import './Toolbar.css';
 import React from "react";
 
 export default function Toolbar({ format, setFormat }) {
