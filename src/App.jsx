@@ -48,4 +48,5 @@ function App() {
     return text.split("").map((char, i) => {
       const prev = history[i - 1] || "";
       const speed = calculateSpeed(char, prev);
-      const color = getHeatCo
+      const color = getHeatColor(speed);
+
