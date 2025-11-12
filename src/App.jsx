@@ -26,4 +26,5 @@ export default function App() {
   }, [text]);
 
   const handleChange = (e) => {
-    if (!replaying) set
+  if (!replaying) setText(e.target.value);
+};
