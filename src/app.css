@@ -1,96 +1,83 @@
-/* --- General app container --- */
+body, html, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #ffffff;
+  font-family: "Inter", sans-serif;
+  color: #222;
+}
+
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  background-color: #ffffff; /* light background instead of black */
-  color: #333333; /* dark text for readability */
-  font-family: Arial, sans-serif;
-}
-
-/* --- Header --- */
-.app-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 20px;
-  background-color: #f5f5f5; /* light header */
-  border-bottom: 1px solid #ddd;
-}
-
-.app-title .highlight-orange {
-  color: orange;
-}
-
-/* --- Main area --- */
-.app-main {
-  display: flex;
-  flex: 1;
-  padding: 20px;
-  gap: 20px;
-}
-
-/* Writing area takes most space */
-.writing-area {
-  flex: 3; /* 3/4 of the main area */
-}
-
-.writing-area textarea {
+  height: 100%;
   width: 100%;
-  height: 80vh; /* fill most of vertical space */
-  font-size: 16px;
-  padding: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  resize: vertical;
-  background-color: #ffffff; /* white background */
-  color: #333333;
 }
 
-/* --- Side panel --- */
-.side-panel {
-  flex: 1; /* 1/4 of the main area */
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+.toolbar {
+  padding: 12px 20px;
+  border-bottom: 1px solid #eee;
+  background: #fafafa;
 }
 
-/* Energy map panel */
-.energy-map {
-  background-color: #fafafa;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-}
-
-.energy-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 2px;
-  height: 150px;
-}
-
-.energy-bar {
-  width: 8px;
-  background: lightgray; /* inactive bars */
-  transition: background 0.2s;
-}
-
-/* Active bars */
-.energy-bar[style*="orange"] {
-  background: orange;
-}
-
-/* Replay panel */
-.replay-controls {
-  background-color: #fafafa;
-  padding: 10px;
-  border-radius: 4px;
-  border: 1px solid #ddd;
-}
-
-.replay-controls button {
-  padding: 6px 12px;
-  font-size: 14px;
+.toolbar button {
+  background: #ffb84d;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 14px;
+  font-weight: 600;
   cursor: pointer;
+  color: #222;
+  transition: background 0.2s ease;
+}
+
+.toolbar button:hover {
+  background: #ffa733;
+}
+
+.writing-area {
+  position: relative;
+  flex: 1;
+  padding: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: #fff;
+  overflow: auto;
+}
+
+.overlay {
+  position: absolute;
+  top: 40px;
+  left: 40px;
+  right: 40px;
+  bottom: 40px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.overlay span {
+  transition: background-color 0.3s ease;
+  border-radius: 2px;
+}
+
+textarea {
+  position: relative;
+  z-index: 2;
+  background: transparent;
+  color: transparent;
+  caret-color: #ff9f00;
+  border: none;
+  resize: none;
+  width: 100%;
+  height: 100%;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  outline: none;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
