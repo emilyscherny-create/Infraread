@@ -1,85 +1,51 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./app.css";
 
-export default function App() {
+const getHeatColor = (speed) => {
+  if (speed < 0.2) return "#4DA6FF"; // calm = blue
+  if (speed < 0.5) return "#FFD166"; // medium = yellow
+  return "#FF6B6B"; // high = red/pink
+};
+
+function App() {
   const [text, setText] = useState("");
+  const [history, setHistory] = useState([]);
   const [replaying, setReplaying] = useState(false);
-  const [replayText, setReplayText] = useState("");
-  const [energyMap, setEnergyMap] = useState([]);
-  const textareaRef = useRef(null);
+  const inputRef = useRef(null);
 
-  const [lastTime, setLastTime] = useState(Date.now());
-  const [lastLength, setLastLength] = useState(0);
-
-  useEffect(() => {
-    const now = Date.now();
-    const timeDiff = now - lastTime;
-    const charDiff = Math.abs(text.length - lastLength);
-
-    if (charDiff > 0 && timeDiff > 0) {
-      const energy = Math.min(1, charDiff / (timeDiff / 1000) / 10);
-      setEnergyMap((prev) => [...prev, { index: text.length, energy }]);
-      setLastTime(now);
-      setLastLength(text.length);
-    }
-  }, [text]);
-
+  // Save text changes for replay
   const handleChange = (e) => {
-    if (!replaying) setText(e.target.value);
+    if (!replaying) {
+      setText(e.target.value);
+      setHistory((prev) => [...prev, e.target.value]);
+    }
   };
 
-  const replayTyping = () => {
-    if (!text) return;
+  // Replay typing with edits/backspaces
+  const handleReplay = () => {
+    if (history.length === 0) return;
     setReplaying(true);
-    setReplayText("");
-    let i = 0;
-
-    const replayInterval = setInterval(() => {
-      if (i < text.length) {
-        setReplayText((prev) => prev + text[i]);
-        i++;
-      } else {
-        clearInterval(replayInterval);
+    let index = 0;
+    const interval = setInterval(() => {
+      setText(history[index]);
+      index++;
+      if (index >= history.length) {
+        clearInterval(interval);
         setReplaying(false);
       }
-    }, 50);
+    }, 50); // adjust typing speed
   };
 
-  const getEnergyColor = (index) => {
-    const match = energyMap.find((m) => m.index === index);
-    if (!match) return "rgba(255,255,255,0)";
-    const energy = match.energy;
-    const r = Math.floor(255 * energy);
-    const g = Math.floor(200 * (1 - energy));
-    const b = 255 - r * 0.4;
-    return `rgba(${r},${g},${b},0.25)`;
+  // Calculate typing speed (chars per second)
+  const calculateSpeed = (currentText, prevText) => {
+    if (!prevText) return 0;
+    const diff = Math.abs(currentText.length - prevText.length);
+    return diff / 1; // simple placeholder; you can refine with timestamps
   };
 
-  return (
-    <div className="app-container">
-      <div className="toolbar">
-        <button onClick={replayTyping} disabled={replaying}>
-          {replaying ? "Replaying..." : "Replay Typing"}
-        </button>
-      </div>
-
-      <div className="writing-area">
-        <div className="overlay">
-          {Array.from(text).map((char, i) => (
-            <span key={i} style={{ backgroundColor: getEnergyColor(i) }}>
-              {replaying ? replayText[i] || "" : char}
-            </span>
-          ))}
-        </div>
-
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={handleChange}
-          placeholder="Start writing..."
-          disabled={replaying}
-        />
-      </div>
-    </div>
-  );
-}
+  // Render text with selective heat map
+  const renderHeatText = () => {
+    return text.split("").map((char, i) => {
+      const prev = history[i - 1] || "";
+      const speed = calculateSpeed(char, prev);
+      const color = getHeatCo
