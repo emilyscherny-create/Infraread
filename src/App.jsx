@@ -8,6 +8,7 @@ export default function App() {
   const [replaying, setReplaying] = useState(false);
   const [replayIndex, setReplayIndex] = useState(0);
   const [history, setHistory] = useState([]);
+  const [analysis, setAnalysis] = useState(null);
   const textboxRef = useRef(null);
 
   // -----------------------------
@@ -34,7 +35,7 @@ export default function App() {
   // -----------------------------
   const handleChange = (e) => {
     const newValue = e.target.value;
-    const time = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
+    const time = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
 
     // Track history for replay (including deletions)
     setHistory((prev) => [...prev, { value: newValue, time }]);
@@ -51,7 +52,7 @@ export default function App() {
 
       const color = getHeatColor(speed);
 
-      setHeatMap([...heatMap, { char: addedChar, color, time }]);
+      setHeatMap((prev) => [...prev, { char: addedChar, color, time }]);
     }
 
     setText(newValue);
@@ -113,34 +114,84 @@ export default function App() {
   }, [replaying, replayIndex, history]);
 
   // -----------------------------
+  // Analysis tool: compute basic session metrics from history
+  // -----------------------------
+  function runAnalysis() {
+    if (!history || history.length === 0) {
+      setAnalysis(null);
+      return null;
+    }
+
+    const times = history.map((h) => h.time || 0).filter(Boolean);
+    const durationMs = times.length >= 2 ? times[times.length - 1] - times[0] : 0;
+
+    const deltas = [];
+    let deletions = 0;
+    for (let i = 1; i < history.length; i++) {
+      const prev = history[i - 1];
+      const cur = history[i];
+      const dt = (cur.time || 0) - (prev.time || 0);
+      deltas.push(dt || 0);
+      if ((cur.value?.length || 0) < (prev.value?.length || 0)) deletions++;
+    }
+
+    const avgSpeed = deltas.length > 0 ? Math.round(deltas.reduce((a, b) => a + b, 0) / deltas.length) : 0;
+    const bursts = deltas.filter((d) => d < 120).length;
+    const pauses = deltas.filter((d) => d > 600).length;
+
+    const flowIndex = Math.max(0, Math.min(100, 100 - avgSpeed / 10));
+    const stressIndex = Math.max(0, Math.min(100, (deletions / Math.max(1, history.length)) * 100));
+    const energyIndex = Math.max(0, Math.min(100, (bursts / Math.max(1, history.length)) * 100));
+
+    const result = { durationMs, avgSpeed, bursts, pauses, deletions, flowIndex, stressIndex, energyIndex };
+    setAnalysis(result);
+    return result;
+  }
+
+  // -----------------------------
   // UI Rendering
   // -----------------------------
   return (
-    <div className="app-container">
-      <h1 className="infraread-title">Infraread</h1>
+    <div className="app-container" style={{ display: "flex", gap: 24 }}>
+      <main style={{ flex: 1 }}>
+        <h1 className="infraread-title">Infraread</h1>
 
-      <div className="editor-section">
-        <textarea
-          ref={textboxRef}
-          className="editor-input"
-          value={text}
-          onChange={handleChange}
-          disabled={replaying}
-          placeholder="Start typing…"
-        />
+        <div className="editor-section">
+          <textarea
+            ref={textboxRef}
+            className="editor-input"
+            value={text}
+            onChange={handleChange}
+            disabled={replaying}
+            placeholder="Start typing…"
+          />
 
-        <div className="heatmap-output">
-          {renderHeatText()}
+          <div className="heatmap-output">
+            {renderHeatText()}
+          </div>
         </div>
-      </div>
 
-      <button
-        className="replay-button"
-        onClick={startReplay}
-        disabled={replaying || history.length === 0}
-      >
-        Replay
-      </button>
+        <button
+          className="replay-button"
+          onClick={startReplay}
+          disabled={replaying || history.length === 0}
+        >
+          Replay
+        </button>
+      </main>
+
+      {/* Right column: Dashboard */}
+      <Dashboard
+        history={history}
+        setHistory={setHistory}
+        heatMap={heatMap}
+        setHeatMap={setHeatMap}
+        text={text}
+        setText={setText}
+        analysis={analysis}
+        setAnalysis={setAnalysis}
+        runAnalysis={runAnalysis}
+      />
     </div>
   );
 }
