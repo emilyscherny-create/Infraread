@@ -1,10 +1,14 @@
 import { useState, useEffect, useRef } from "react";
 import "./app.css";
 import Dashboard from "./InfrareadDashboard.jsx";
+import { autoAnnotateText } from "./autoAnnotate";
 
 export default function App() {
   const [text, setText] = useState("");
-  const [heatMap, setHeatMap] = useState([]); // now stores annotations: [{ phrase, color }]
+  const [heatMap, setHeatMap] = useState([]); // user-marked phrases
+  const [autoAnnotations, setAutoAnnotations] = useState([]); // generated automatically
+  const [autoAnnotateEnabled, setAutoAnnotateEnabled] = useState(false);
+
   const [replaying, setReplaying] = useState(false);
   const [replayIndex, setReplayIndex] = useState(0);
   const [history, setHistory] = useState([]);
@@ -16,32 +20,12 @@ export default function App() {
   const [phraseColor, setPhraseColor] = useState("#10b981"); // default green
 
   // -----------------------------
-  // Calculate typing speed per keystroke
-  // (left for history/replay; no longer used for heat)
-  // -----------------------------
-  function calculateSpeed(current, previous) {
-    if (!previous) return 0;
-    return current.time - previous.time;
-  }
-
-  function getHeatColor(speed) {
-    if (speed > 600) return "rgba(0, 140, 255, 0.25)";
-    if (speed > 300) return "rgba(0, 255, 120, 0.30)";
-    if (speed > 150) return "rgba(255, 165, 0, 0.35)";
-    return "rgba(255, 0, 80, 0.45)";
-  }
-
-  // -----------------------------
   // Handle typing + history tracking
   // -----------------------------
   const handleChange = (e) => {
     const newValue = e.target.value;
     const time = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
-
-    // Track history for replay (including deletions)
     setHistory((prev) => [...prev, { value: newValue, time }]);
-
-    // NOTE: We no longer auto-update heatMap here based on keystroke speed.
     setText(newValue);
   };
 
@@ -51,7 +35,6 @@ export default function App() {
   function markPhrase() {
     const phrase = phraseToMark.trim();
     if (!phrase) return;
-    // avoid duplicate same-phrase (case-insensitive)
     if (heatMap.some((a) => a.phrase.toLowerCase() === phrase.toLowerCase())) {
       setPhraseToMark("");
       return;
@@ -65,47 +48,56 @@ export default function App() {
   }
 
   // -----------------------------
+  // Auto-annotation: recompute when text, enabled, or user annotations change
+  // -----------------------------
+  useEffect(() => {
+    if (!autoAnnotateEnabled) {
+      setAutoAnnotations([]);
+      return;
+    }
+    // compute autos based on current text and user annotations
+    const autos = autoAnnotateText(text, heatMap);
+    setAutoAnnotations(autos);
+  }, [text, autoAnnotateEnabled, heatMap]);
+
+  // -----------------------------
   // Render text with phrase overlays
   // - Uses longest-match-first and word-boundary checks
   // -----------------------------
   function renderHeatText() {
     if (!text) return null;
-    if (!heatMap || heatMap.length === 0) {
-      // no annotations: render text as-is
-      return <span>{text}</span>;
-    }
 
-    const annotations = heatMap.map((a) => ({ phrase: a.phrase, phraseLower: a.phrase.toLowerCase(), color: a.color }));
+    const merged = [...heatMap.map(a => ({ ...a, source: "user" })), ...autoAnnotations.map(a => ({ ...a, source: "auto" }))];
+
+    // build annotation lookup in lower-case for matching
+    const annotations = merged.map((a) => ({ phrase: a.phrase, phraseLower: a.phrase.toLowerCase(), color: a.color, source: a.source }));
 
     const out = [];
     const src = text;
     const len = src.length;
     let i = 0;
 
-    // helper to check word boundary at start (pos) and end (pos+matchLen)
     const isStartBoundary = (pos) => pos === 0 || /\s|[.,!?;:()"\u2014\u2013]/.test(src[pos - 1]);
     const isEndBoundary = (pos) => pos >= len || /\s|[.,!?;:()"\u2014\u2013]/.test(src[pos]);
 
     while (i < len) {
-      // If current char is whitespace, just append it
       if (/\s/.test(src[i])) {
         out.push(<span key={i} className="plain-char">{src[i]}</span>);
         i += 1;
         continue;
       }
 
-      // Try to find the longest annotation that matches at position i with word boundaries
       let best = null; // {annotation, matchLen}
       for (const ann of annotations) {
         const p = ann.phraseLower;
         const segment = src.substr(i, p.length).toLowerCase();
         if (segment === p) {
-          // check boundaries: start must be boundary, end must be boundary
           const startOk = isStartBoundary(i);
           const endOk = isEndBoundary(i + p.length);
           if (startOk && endOk) {
-            if (!best || p.length > best.matchLen) {
-              best = { ann, matchLen: p.length };
+            if (!best || p.length > best.matchLen || (p.length === best.matchLen && best.annotation.source === "auto" && ann.source === "user")) {
+              // prefer longer match; in tie prefer user annotation over auto
+              best = { annotation: ann, matchLen: p.length };
             }
           }
         }
@@ -113,8 +105,10 @@ export default function App() {
 
       if (best) {
         const matchedText = src.substr(i, best.matchLen);
+        // add different outline if auto vs user (optional visual cue)
+        const style = { backgroundColor: best.annotation.color };
         out.push(
-          <span key={i} className="phrase-highlight" style={{ backgroundColor: best.ann.color }}>
+          <span key={i} className={`phrase-highlight ${best.annotation.source === "auto" ? "auto" : "user"}`} style={style}>
             {matchedText}
           </span>
         );
@@ -122,8 +116,6 @@ export default function App() {
         continue;
       }
 
-      // No annotation matched at this position -> consume until next whitespace or annotation possible
-      // Consume next "word"
       let j = i;
       while (j < len && !/\s/.test(src[j])) j++;
       const piece = src.substring(i, j);
@@ -167,7 +159,7 @@ export default function App() {
   }, [replaying, replayIndex, history]);
 
   // -----------------------------
-  // Analysis tool: compute basic session metrics from history
+  // Analysis tool (unchanged)
   // -----------------------------
   function runAnalysis() {
     if (!history || history.length === 0) {
@@ -244,6 +236,15 @@ export default function App() {
             </button>
           </div>
 
+          <label className="auto-toggle">
+            <input
+              type="checkbox"
+              checked={autoAnnotateEnabled}
+              onChange={(e) => setAutoAnnotateEnabled(e.target.checked)}
+            />{" "}
+            Auto annotate (connotation)
+          </label>
+
           <button
             className="action-btn action-green"
             onClick={startReplay}
@@ -280,7 +281,7 @@ export default function App() {
       <Dashboard
         history={history}
         setHistory={setHistory}
-        heatMap={heatMap}
+        heatMap={[...heatMap, ...autoAnnotations]}
         setHeatMap={setHeatMap}
         text={text}
         setText={setText}
