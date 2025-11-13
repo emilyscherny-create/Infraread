@@ -1,128 +1,82 @@
-/* Infraread app styles - collegiate aesthetic + improved layout */
+/* --- additions / tweaks for phrase-based heat highlighting --- */
 
-/* Layout */
-.app-container {
+/* phrase controls in the editor controls-row */
+.phrase-controls {
   display: flex;
-  gap: 28px;
-  align-items: flex-start;
-  padding: 28px;
-  min-height: 100vh;
-  background: linear-gradient(180deg, #f7f9fc, #f2f5fb);
-  box-sizing: border-box;
-  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
-  color: #07204a;
+  gap: 8px;
+  align-items: center;
+  margin-right: 12px;
 }
 
-/* Editor column */
-.editor-column {
-  flex: 1;
-  max-width: 900px;
-}
-
-/* Title */
-.infraread-title {
-  font-family: Georgia, "Times New Roman", Times, serif;
-  font-size: 36px;
-  margin: 0 0 16px 0;
-  color: #07183a;
-  letter-spacing: -0.5px;
-}
-
-/* Editor area */
-.editor-section {
-  display: flex;
-  flex-direction: column;
-}
-
-.editor-input {
-  width: 100%;
-  min-height: 360px; /* larger textbox */
-  max-height: 800px;
-  font-size: 18px;
-  line-height: 1.7;
-  padding: 20px;
-  border-radius: 12px;
+.phrase-input {
+  padding: 8px 10px;
+  border-radius: 8px;
   border: 1px solid rgba(10, 25, 60, 0.08);
-  box-shadow: 0 10px 30px rgba(9, 30, 66, 0.06);
-  resize: vertical;
-  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif; /* collegiate serif */
-  background: linear-gradient(180deg, #ffffff, #fbfbfe);
-  color: #07183a;
-  outline: none;
-}
-
-/* heatmap output (rendered characters) */
-.heatmap-output {
-  margin-top: 12px;
-  padding: 14px;
-  background: #fcfdff;
-  border-radius: 10px;
-  border: 1px solid rgba(10, 20, 40, 0.04);
-  min-height: 64px;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
   font-family: Georgia, "Times New Roman", Times, serif;
-  color: #0b1f3b;
-  white-space: pre-wrap;
-  word-wrap: break-word;
+  min-width: 220px;
 }
 
-/* individual heat character */
-.heat-char {
-  transition: background-color 0.25s ease;
+.phrase-color {
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+/* rendering of highlighted phrases inside the heatmap output */
+.phrase-highlight {
   padding: 2px 6px;
-  border-radius: 4px;
-  margin-right: 2px;
+  border-radius: 6px;
+  color: #07183a;
+  font-weight: 700;
+  display: inline-block;
+  margin-right: 4px;
+  transition: box-shadow 120ms ease, transform 120ms ease;
+}
+
+.phrase-highlight:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(11, 29, 65, 0.06);
+}
+
+.plain-word {
+  margin-right: 4px;
   display: inline-block;
 }
 
-/* Controls row */
-.controls-row {
-  display: flex;
-  gap: 12px;
-  margin-top: 14px;
-  align-items: center;
+.plain-char {
+  white-space: pre-wrap;
 }
 
-/* Button base */
-.btn {
-  padding: 10px 16px;
-  border-radius: 10px;
-  border: 0;
-  cursor: pointer;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
-  box-shadow: 0 8px 20px rgba(11, 29, 65, 0.08);
-  transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+/* annotations list */
+.annotations-list {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #0b1f3b;
 }
 
-/* Primary collegiate look: navy gradient + gold border/text */
-.replay-btn {
-  background: linear-gradient(180deg, #0b3d91, #081f4d);
-  color: #f6e7b3;
-  border: 2px solid #f7c948;
-  box-shadow: 0 10px 26px rgba(8, 29, 72, 0.12);
-  padding: 12px 18px;
-  font-size: 13px;
+.annotations-list ul {
+  margin: 8px 0 0 0;
+  padding-left: 18px;
 }
 
-.replay-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 14px 34px rgba(8, 29, 72, 0.16);
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 8px;
+  border: 1px solid rgba(0,0,0,0.06);
 }
 
-/* Secondary: subtle white with navy outline */
-.secondary-btn {
-  background: #ffffff;
+.small-remove {
+  margin-left: 8px;
+  background: transparent;
+  border: none;
   color: #0b2a66;
-  border: 2px solid rgba(11, 45, 101, 0.14);
-  font-size: 13px;
-  padding: 10px 16px;
+  cursor: pointer;
+  font-weight: 600;
 }
-
-.secondary-btn:hover:not(:disabled) {
-  transform: translate
