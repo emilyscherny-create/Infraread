@@ -33,7 +33,7 @@ export default function App() {
   // -----------------------------
   const handleChange = (e) => {
     const newValue = e.target.value;
-    const time = performance.now();
+    const time = typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now();
 
     // Track history for replay (including deletions)
     setHistory((prev) => [...prev, { value: newValue, time }]);
