@@ -1,10 +1,6 @@
 // Simple offline auto-annotation helpers — maps words to connotation and colors.
-// If you install the `sentiment` npm package it will be used; otherwise this
-// falls back to a small built-in lexicon.
-//
-// Usage:
-//   const autos = autoAnnotateText(text, existingAnnotations);
-//   autos -> [{ phrase, color, score }, ... ]
+// Uses ES module named exports so it can be imported with:
+//   import { autoAnnotateText } from "./autoAnnotate";
 
 let Sentiment = null;
 try {
@@ -44,7 +40,7 @@ const FALLBACK_LEXICON = {
 };
 
 // Map score to color — tweak to taste.
-function scoreToColor(score) {
+export function scoreToColor(score) {
   if (score >= 3) return "rgba(255, 195, 60, 0.85)"; // very positive -> gold
   if (score >= 1) return "rgba(16, 185, 129, 0.75)"; // positive -> green
   if (score === 0) return "rgba(148,163,184,0.12)"; // neutral -> subtle gray-blue
@@ -53,7 +49,7 @@ function scoreToColor(score) {
 }
 
 // Compute a score for each token using the sentiment package if available, otherwise fallback.
-function computeConnotationScoresForWords(words) {
+export function computeConnotationScoresForWords(words) {
   const map = new Map();
   if (Sentiment) {
     const sentiment = new Sentiment();
@@ -78,7 +74,7 @@ function computeConnotationScoresForWords(words) {
 }
 
 // Build a set of distinct tokens from text (simple splitting/cleanup)
-function extractDistinctTokens(text) {
+export function extractDistinctTokens(text) {
   if (!text) return [];
   const tokens = (text || "")
     .split(/\s+/)
@@ -92,7 +88,7 @@ function extractDistinctTokens(text) {
 
 // Given text and existing user annotations, generate auto annotations.
 // Returns array: [{ phrase, color, score }]
-function autoAnnotateText(text, existingAnnotations = []) {
+export function autoAnnotateText(text, existingAnnotations = []) {
   const tokens = extractDistinctTokens(text);
   if (tokens.length === 0) return [];
 
@@ -112,9 +108,5 @@ function autoAnnotateText(text, existingAnnotations = []) {
   return annotations;
 }
 
-module.exports = {
-  autoAnnotateText,
-  computeConnotationScoresForWords,
-  scoreToColor,
-  FALLBACK_LEXICON,
-};
+// export fallback lexicon in case you want to reuse it elsewhere
+export { FALLBACK_LEXICON };
