@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import "./app.css";
+import Dashboard from "./InfrareadDashboard.jsx";
 
 export default function App() {
   const [text, setText] = useState("");
