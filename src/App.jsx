@@ -21,7 +21,6 @@ export default function App() {
 
   // -----------------------------
   // Determine heat color based on typing speed
-  // Lower = calm blue, medium = green, fast = orange/red
   // -----------------------------
   function getHeatColor(speed) {
     if (speed > 600) return "rgba(0, 140, 255, 0.25)";   // calm blue
@@ -68,11 +67,9 @@ export default function App() {
       return (
         <span
           key={i}
+          className="heat-char"
           style={{
             backgroundColor: bg,
-            transition: "background-color 0.25s ease",
-            padding: "2px",
-            borderRadius: "3px"
           }}
         >
           {char}
@@ -152,8 +149,8 @@ export default function App() {
   // UI Rendering
   // -----------------------------
   return (
-    <div className="app-container" style={{ display: "flex", gap: 24 }}>
-      <main style={{ flex: 1 }}>
+    <div className="app-container">
+      <main className="editor-column">
         <h1 className="infraread-title">Infraread</h1>
 
         <div className="editor-section">
@@ -171,16 +168,25 @@ export default function App() {
           </div>
         </div>
 
-        <button
-          className="replay-button"
-          onClick={startReplay}
-          disabled={replaying || history.length === 0}
-        >
-          Replay
-        </button>
+        <div className="controls-row">
+          <button
+            className="btn replay-btn"
+            onClick={startReplay}
+            disabled={replaying || history.length === 0}
+          >
+            Replay
+          </button>
+
+          <button
+            className="btn secondary-btn"
+            onClick={runAnalysis}
+            disabled={history.length === 0}
+          >
+            Run Analysis
+          </button>
+        </div>
       </main>
 
-      {/* Right column: Dashboard */}
       <Dashboard
         history={history}
         setHistory={setHistory}
