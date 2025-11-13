@@ -1,82 +1,25 @@
-/* --- additions / tweaks for phrase-based heat highlighting --- */
-
-/* phrase controls in the editor controls-row */
-.phrase-controls {
-  display: flex;
-  gap: 8px;
+/* Auto-annotation toggle + annotation visuals */
+.auto-toggle {
+  display: inline-flex;
   align-items: center;
-  margin-right: 12px;
-}
-
-.phrase-input {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(10, 25, 60, 0.08);
-  font-family: Georgia, "Times New Roman", Times, serif;
-  min-width: 220px;
-}
-
-.phrase-color {
-  width: 38px;
-  height: 38px;
-  padding: 0;
-  border: none;
-  background: none;
-  cursor: pointer;
-}
-
-/* rendering of highlighted phrases inside the heatmap output */
-.phrase-highlight {
-  padding: 2px 6px;
-  border-radius: 6px;
-  color: #07183a;
-  font-weight: 700;
-  display: inline-block;
-  margin-right: 4px;
-  transition: box-shadow 120ms ease, transform 120ms ease;
-}
-
-.phrase-highlight:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(11, 29, 65, 0.06);
-}
-
-.plain-word {
-  margin-right: 4px;
-  display: inline-block;
-}
-
-.plain-char {
-  white-space: pre-wrap;
-}
-
-/* annotations list */
-.annotations-list {
-  margin-top: 12px;
-  font-size: 14px;
-  color: #0b1f3b;
-}
-
-.annotations-list ul {
-  margin: 8px 0 0 0;
-  padding-left: 18px;
-}
-
-.legend-swatch {
-  display: inline-block;
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  vertical-align: middle;
-  margin-right: 8px;
-  border: 1px solid rgba(0,0,0,0.06);
-}
-
-.small-remove {
-  margin-left: 8px;
-  background: transparent;
-  border: none;
+  gap: 8px;
+  font-size: 13px;
   color: #0b2a66;
-  cursor: pointer;
-  font-weight: 600;
+  margin-right: 10px;
+}
+
+.phrase-highlight.auto {
+  /* slightly lighter outline for auto annotations */
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.06);
+  opacity: 0.95;
+}
+
+/* small legend tweaks in annotations list when autos exist */
+.annotations-list .legend-text {
+  margin-right: 6px;
+}
+
+/* optional: visually distinguish auto annotations in the small legend (if you list them) */
+.auto-legend-swatch {
+  border: 1px dashed rgba(0,0,0,0.06);
 }
