@@ -1,25 +1,313 @@
+/* Instagram-inspired theme — warmer colors, soft gradients, easy visuals */
+
+/* Layout */
+.app-container {
+  display: flex;
+  gap: 28px;
+  align-items: flex-start;
+  padding: 28px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  /* subtle warm background with a faint Instagram-like radial glow */
+  background: radial-gradient(1200px 600px at 10% 10%, rgba(249, 130, 74, 0.06), transparent 6%),
+              radial-gradient(1000px 500px at 90% 80%, rgba(141, 63, 193, 0.04), transparent 6%),
+              linear-gradient(180deg, #fffdfb 0%, #fff8f4 100%);
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  color: #0f172a;
+}
+
+/* Editor column */
+.editor-column {
+  flex: 1;
+  max-width: 920px;
+}
+
+/* Title: gradient text like Instagram logo colors */
+.infraread-title {
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 36px;
+  margin: 0 0 16px 0;
+  letter-spacing: -0.5px;
+  background: linear-gradient(90deg, #f58529 0%, #dd2a7b 50%, #8134af 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-block;
+  transform: translateZ(0); /* improve rendering */
+}
+
+/* Editor area */
+.editor-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-input {
+  width: 100%;
+  min-height: 380px; /* roomy typing area */
+  max-height: 900px;
+  font-size: 18px;
+  line-height: 1.75;
+  padding: 22px;
+  border-radius: 16px;
+  border: 1px solid rgba(11, 29, 65, 0.06);
+  /* frosted glass feel over warm background */
+  background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,250,247,0.94));
+  box-shadow: 0 18px 40px rgba(11, 29, 65, 0.06);
+  resize: vertical;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  color: #07183a;
+  outline: none;
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.editor-input:focus {
+  box-shadow: 0 26px 60px rgba(136, 68, 197, 0.12);
+  transform: translateY(-2px);
+}
+
+/* heatmap output (rendered characters/phrases) */
+.heatmap-output {
+  margin-top: 12px;
+  padding: 14px;
+  background: linear-gradient(180deg, #fff7f3, #fffdfc);
+  border-radius: 12px;
+  border: 1px solid rgba(11, 29, 65, 0.04);
+  min-height: 64px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
+  font-family: Georgia, "Times New Roman", Times, serif;
+  color: #0b1f3b;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* individual heat character */
+.heat-char {
+  transition: background-color 0.25s ease;
+  padding: 2px 6px;
+  border-radius: 6px;
+  margin-right: 4px;
+  display: inline-block;
+}
+
+/* Controls row */
+.controls-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+/* Phrase controls */
+.phrase-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-right: 8px;
+}
+
+.phrase-input {
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(11, 29, 65, 0.06);
+  font-family: Georgia, "Times New Roman", Times, serif;
+  min-width: 220px;
+  background: rgba(255,255,255,0.9);
+}
+
+/* Color input */
+.phrase-color {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(11, 29, 65, 0.06);
+}
+
+/* unified action button base (warmer Instagram vibe) */
+.action-btn, .btn {
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  box-shadow: 0 12px 30px rgba(11, 29, 65, 0.08);
+  transition: transform 160ms cubic-bezier(.2,.9,.2,1), box-shadow 160ms ease, opacity 160ms ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Instagram-like gradient primary (warm) */
+.action-ig {
+  background: linear-gradient(90deg, #f58529 0%, #dd2a7b 50%, #8134af 100%); /* Instagram-ish */
+  color: #fff;
+  box-shadow: 0 18px 38px rgba(136, 68, 197, 0.18);
+  padding: 12px 18px;
+  border-radius: 14px;
+}
+
+.action-ig:hover:not(:disabled) {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: 0 28px 60px rgba(136, 68, 197, 0.22);
+}
+
+/* Warm green action (for Run Analysis/Download report mapping) */
+.action-green {
+  background: linear-gradient(90deg, #34d399 0%, #10b981 100%);
+  box-shadow: 0 14px 36px rgba(16, 185, 129, 0.12);
+}
+
+.action-green:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 46px rgba(16, 185, 129, 0.16);
+}
+
+/* Warm sky/blue-ish for CSV etc but softened towards magenta */
+.action-sky {
+  background: linear-gradient(90deg, #ff8a80 0%, #ff6e7f 50%, #ff3b6b 100%); /* warm coral/pink */
+  box-shadow: 0 14px 36px rgba(255,77,146,0.10);
+}
+
+.action-sky:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 22px 46px rgba(255,77,146,0.14);
+}
+
+/* Secondary: soft translucent */
+.secondary-btn {
+  background: rgba(255,255,255,0.9);
+  color: #3a2b4a;
+  border: 1px solid rgba(11, 29, 65, 0.06);
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 12px;
+}
+
+.secondary-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 36px rgba(11, 29, 65, 0.06);
+}
+
+/* Disabled states */
+.action-btn:disabled,
+.action-btn[disabled],
+.btn:disabled,
+.btn[disabled],
+.secondary-btn:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Dashboard area (right column) */
+.infraread-dashboard {
+  width: 380px;
+  max-width: 42vw;
+}
+
+/* Boxes inside dashboard */
+.infraread-dashboard .box {
+  background: #fff;
+  border: 1px solid rgba(11, 29, 65, 0.04);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 14px;
+  box-shadow: 0 10px 30px rgba(11, 29, 65, 0.06);
+}
+
+/* Phrase highlight warm look */
+.phrase-highlight {
+  padding: 4px 8px;
+  border-radius: 10px;
+  color: #07183a;
+  font-weight: 700;
+  display: inline-block;
+  margin-right: 6px;
+  transition: box-shadow 160ms ease, transform 160ms ease, opacity 160ms ease;
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+.phrase-highlight:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 36px rgba(11, 29, 65, 0.08);
+}
+
+/* slightly subdued look for auto annotations */
+.phrase-highlight.auto {
+  opacity: 0.96;
+  filter: saturate(0.95) brightness(1.02);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.04);
+}
+
+/* plain text styles */
+.plain-word {
+  margin-right: 6px;
+  display: inline-block;
+}
+
+.plain-char {
+  white-space: pre-wrap;
+}
+
+/* annotations list */
+.annotations-list {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #3a2b4a;
+}
+
+.annotations-list ul {
+  margin: 8px 0 0 0;
+  padding-left: 18px;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  vertical-align: middle;
+  margin-right: 8px;
+  border: 1px solid rgba(0,0,0,0.06);
+}
+
+.small-remove {
+  margin-left: 8px;
+  background: transparent;
+  border: none;
+  color: #3a2b4a;
+  cursor: pointer;
+  font-weight: 600;
+}
+
 /* Auto-annotation toggle + annotation visuals */
 .auto-toggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #0b2a66;
+  color: #3a2b4a;
   margin-right: 10px;
 }
 
-.phrase-highlight.auto {
-  /* slightly lighter outline for auto annotations */
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.06);
-  opacity: 0.95;
-}
-
-/* small legend tweaks in annotations list when autos exist */
-.annotations-list .legend-text {
-  margin-right: 6px;
-}
-
-/* optional: visually distinguish auto annotations in the small legend (if you list them) */
-.auto-legend-swatch {
-  border: 1px dashed rgba(0,0,0,0.06);
+/* small responsive tweaks */
+@media (max-width: 980px) {
+  .app-container {
+    flex-direction: column;
+    padding: 18px;
+  }
+  .infraread-dashboard {
+    width: 100%;
+    max-width: 100%;
+  }
 }
