@@ -1,112 +1,149 @@
-// Simple offline auto-annotation helpers — maps words to connotation and colors.
-// Uses ES module named exports so it can be imported with:
-//   import { autoAnnotateText } from "./autoAnnotate";
+// Lightweight client-side connotation annotator (no external deps).
+// Exports:
+// - computeConnotationScoresForWords(words: string[]) => Map(lowercase -> score in [-1,1])
+// - scoreToColor(score: number) => CSS color string
+// - autoAnnotateText(text: string, userHeatMap: Array<{phrase,color}>) => Array<{phrase,color}>
+//
+// This file is intentionally small and self-contained. It focuses on stronger,
+// higher-contrast background colors so highlights are visible on the current theme.
 
-let Sentiment = null;
-try {
-  // optional; install with `npm install sentiment` if you want improved coverage
-  // and scoring. This try/catch keeps the module safe without the dependency.
-  // eslint-disable-next-line global-require, import/no-extraneous-dependencies
-  Sentiment = require("sentiment");
-} catch (e) {
-  Sentiment = null;
-}
-
-// Tiny fallback lexicon (word -> score). Replace with AFINN/NRC for better results.
-const FALLBACK_LEXICON = {
-  great: 3,
-  excellent: 4,
-  good: 2,
-  happy: 2,
-  joy: 3,
-  calm: 2,
-  relaxed: 2,
-  neutral: 0,
-  meh: 0,
-  bad: -2,
-  sad: -2,
-  angry: -3,
-  hate: -4,
-  panic: -3,
-  anxious: -2,
-  energetic: 2,
-  focus: 1,
-  tired: -1,
-  bored: -1,
-  love: 3,
-  delightful: 3,
-  frustrating: -2,
-  stressful: -3,
+const LEXICON = {
+  // Positive
+  happy: 0.85,
+  joy: 0.85,
+  love: 0.95,
+  excellent: 0.9,
+  good: 0.65,
+  great: 0.75,
+  success: 0.65,
+  celebrate: 0.6,
+  // Neutral
+  the: 0,
+  and: 0,
+  // Negative
+  sad: -0.85,
+  anger: -0.85,
+  angry: -0.85,
+  hate: -0.95,
+  bad: -0.6,
+  failure: -0.75,
+  worried: -0.55,
+  anxious: -0.6,
+  // Multi-word examples
+  "not good": -0.6,
+  "very happy": 0.9,
 };
 
-// Map score to color — tweak to taste.
+function normalizeScore(raw) {
+  if (Number.isNaN(raw) || !isFinite(raw)) return 0;
+  return Math.max(-1, Math.min(1, raw));
+}
+
+// Stronger, higher-contrast palette so backgrounds are visible on the app panel.
+// Negative => reds/oranges, Neutral => transparent (no highlight), Positive => warm golds.
 export function scoreToColor(score) {
-  if (score >= 3) return "rgba(255, 195, 60, 0.85)"; // very positive -> gold
-  if (score >= 1) return "rgba(16, 185, 129, 0.75)"; // positive -> green
-  if (score === 0) return "rgba(148,163,184,0.12)"; // neutral -> subtle gray-blue
-  if (score <= -3) return "rgba(255, 99, 92, 0.85)"; // very negative -> red
-  return "rgba(255, 165, 0, 0.55)"; // slightly negative -> orange
+  const s = normalizeScore(score);
+  if (s <= -0.75) return "#ff3b2e"; // very negative (bright red)
+  if (s <= -0.35) return "#ff7a5f"; // negative
+  if (s < 0) return "#ffc9b8"; // mild negative
+  if (s === 0) return "transparent"; // neutral -> no background
+  if (s < 0.35) return "#fff0c9"; // mild positive (pale warm)
+  if (s < 0.75) return "#ffd66b"; // positive
+  return "#ffbf3b"; // very positive (warm gold)
 }
 
-// Compute a score for each token using the sentiment package if available, otherwise fallback.
+function hexToRgb(hex) {
+  const hx = hex.replace("#", "");
+  const bigint = parseInt(hx, 16);
+  if (hx.length === 6) {
+    return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+  }
+  return { r: 255, g: 255, b: 255 };
+}
+
+function rgbToHex(r, g, b) {
+  return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
+}
+
+function lerpColor(a, b, t) {
+  const ca = hexToRgb(a);
+  const cb = hexToRgb(b);
+  const r = Math.round(ca.r + (cb.r - ca.r) * t);
+  const g = Math.round(ca.g + (cb.g - ca.g) * t);
+  const bl = Math.round(ca.b + (cb.b - ca.b) * t);
+  return rgbToHex(r, g, bl);
+}
+
+// Compute connotation scores for an array of words/phrases.
+// Returns Map(lowercase -> score in [-1,1])
 export function computeConnotationScoresForWords(words) {
-  const map = new Map();
-  if (Sentiment) {
-    const sentiment = new Sentiment();
-    for (const w of words) {
-      const r = sentiment.analyze(w);
-      map.set(w.toLowerCase(), r.score || 0);
+  const out = new Map();
+  if (!words || words.length === 0) return out;
+  for (const raw of words) {
+    const w = String(raw || "").trim().toLowerCase();
+    if (!w) continue;
+    if (Object.prototype.hasOwnProperty.call(LEXICON, w)) {
+      out.set(w, normalizeScore(LEXICON[w]));
+      continue;
     }
-  } else {
-    for (const w of words) {
-      const low = w.toLowerCase();
-      let score = 0;
-      if (Object.prototype.hasOwnProperty.call(FALLBACK_LEXICON, low)) {
-        score = FALLBACK_LEXICON[low];
-      } else {
-        const stem = low.replace(/[^a-z0-9]/g, "").replace(/(ing|ed|s)$/, "");
-        score = FALLBACK_LEXICON[stem] || 0;
+    // Fallback: split and average known token scores
+    const parts = w.split(/\s+/).filter(Boolean);
+    let total = 0;
+    let count = 0;
+    for (const p of parts) {
+      if (Object.prototype.hasOwnProperty.call(LEXICON, p)) {
+        total += LEXICON[p];
+        count += 1;
       }
-      map.set(low, score);
+    }
+    const score = count > 0 ? total / count : 0;
+    out.set(w, normalizeScore(score));
+  }
+  return out;
+}
+
+// Scan text and return auto-annotations
+// - text: the whole editor text
+// - userHeatMap: array of user-marked phrases {phrase,color}
+export function autoAnnotateText(text = "", userHeatMap = []) {
+  if (!text || typeof text !== "string") return [];
+  const userSet = new Set((userHeatMap || []).map((u) => (u.phrase || "").toLowerCase()));
+
+  // Tokenization: get words (alphanumeric) and build unigram + bigram candidates
+  const reWord = /\w+/g;
+  const wordList = [];
+  let m;
+  while ((m = reWord.exec(text)) !== null) {
+    wordList.push(m[0]);
+  }
+
+  const candidates = [];
+  for (let i = 0; i < wordList.length; i++) {
+    candidates.push(wordList[i]);
+    if (i + 1 < wordList.length) candidates.push(`${wordList[i]} ${wordList[i + 1]}`);
+  }
+
+  const candidateSet = Array.from(new Set(candidates.map((w) => w.trim().toLowerCase()))).filter(Boolean);
+  const scores = computeConnotationScoresForWords(candidateSet);
+
+  const THRESHOLD = 0.18; // tuneable threshold for visibility
+  const out = [];
+  for (const [phrase, score] of scores.entries()) {
+    if (!phrase) continue;
+    if (userSet.has(phrase)) continue;
+    if (Math.abs(score) >= THRESHOLD) {
+      out.push({ phrase, color: scoreToColor(score), score });
     }
   }
-  return map;
+
+  // Sort longer phrases first to help longest-match-first rendering
+  out.sort((a, b) => b.phrase.length - a.phrase.length);
+  return out;
 }
 
-// Build a set of distinct tokens from text (simple splitting/cleanup)
-export function extractDistinctTokens(text) {
-  if (!text) return [];
-  const tokens = (text || "")
-    .split(/\s+/)
-    .map((t) => t.trim())
-    .filter(Boolean)
-    .map((t) => t.replace(/^[^a-zA-Z0-9]+|[^a-zA-Z0-9]+$/g, ""))
-    .filter(Boolean);
-  // Deduplicate preserving order
-  return Array.from(new Set(tokens));
-}
-
-// Given text and existing user annotations, generate auto annotations.
-// Returns array: [{ phrase, color, score }]
-export function autoAnnotateText(text, existingAnnotations = []) {
-  const tokens = extractDistinctTokens(text);
-  if (tokens.length === 0) return [];
-
-  const scores = computeConnotationScoresForWords(tokens);
-
-  // Respect user annotations (do not override exact phrase matches)
-  const userPhrasesLower = new Set((existingAnnotations || []).map((a) => a.phrase.toLowerCase()));
-
-  const annotations = [];
-  for (const token of tokens) {
-    const low = token.toLowerCase();
-    if (userPhrasesLower.has(low)) continue;
-    const score = scores.get(low) || 0;
-    const color = scoreToColor(score);
-    annotations.push({ phrase: token, color, score });
-  }
-  return annotations;
-}
-
-// export fallback lexicon in case you want to reuse it elsewhere
-export { FALLBACK_LEXICON };
+// default export for convenience
+export default {
+  computeConnotationScoresForWords,
+  scoreToColor,
+  autoAnnotateText,
+};
