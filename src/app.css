@@ -1,4 +1,4 @@
-/* Instagram-inspired theme — warmer colors, soft gradients, easy visuals */
+/* Instagram-inspired theme — updated: all actions use warm gradients (no aqua) */
 
 /* Layout */
 .app-container {
@@ -8,7 +8,7 @@
   padding: 28px;
   min-height: 100vh;
   box-sizing: border-box;
-  /* subtle warm background with a faint Instagram-like radial glow */
+  /* subtle warm background with a faint radial glow */
   background: radial-gradient(1200px 600px at 10% 10%, rgba(249, 130, 74, 0.06), transparent 6%),
               radial-gradient(1000px 500px at 90% 80%, rgba(141, 63, 193, 0.04), transparent 6%),
               linear-gradient(180deg, #fffdfb 0%, #fff8f4 100%);
@@ -22,7 +22,7 @@
   max-width: 920px;
 }
 
-/* Title: gradient text like Instagram logo colors */
+/* Title: multicolor gradient like Instagram logo */
 .infraread-title {
   font-family: Georgia, "Times New Roman", Times, serif;
   font-size: 36px;
@@ -33,7 +33,7 @@
   background-clip: text;
   color: transparent;
   display: inline-block;
-  transform: translateZ(0); /* improve rendering */
+  transform: translateZ(0);
 }
 
 /* Editor area */
@@ -44,14 +44,13 @@
 
 .editor-input {
   width: 100%;
-  min-height: 380px; /* roomy typing area */
+  min-height: 380px;
   max-height: 900px;
   font-size: 18px;
   line-height: 1.75;
   padding: 22px;
   border-radius: 16px;
   border: 1px solid rgba(11, 29, 65, 0.06);
-  /* frosted glass feel over warm background */
   background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,250,247,0.94));
   box-shadow: 0 18px 40px rgba(11, 29, 65, 0.06);
   resize: vertical;
@@ -66,7 +65,7 @@
   transform: translateY(-2px);
 }
 
-/* heatmap output (rendered characters/phrases) */
+/* heatmap output */
 .heatmap-output {
   margin-top: 12px;
   padding: 14px;
@@ -81,7 +80,7 @@
   word-wrap: break-word;
 }
 
-/* individual heat character */
+/* heat-char */
 .heat-char {
   transition: background-color 0.25s ease;
   padding: 2px 6px;
@@ -128,7 +127,7 @@
   box-shadow: 0 6px 18px rgba(11, 29, 65, 0.06);
 }
 
-/* unified action button base (warmer Instagram vibe) */
+/* unified action button base (warm gradients everywhere now) */
 .action-btn, .btn {
   padding: 10px 14px;
   border-radius: 12px;
@@ -146,9 +145,9 @@
   justify-content: center;
 }
 
-/* Instagram-like gradient primary (warm) */
+/* Primary Instagram-like gradient (used for main actions) */
 .action-ig {
-  background: linear-gradient(90deg, #f58529 0%, #dd2a7b 50%, #8134af 100%); /* Instagram-ish */
+  background: linear-gradient(90deg, #f58529 0%, #dd2a7b 50%, #8134af 100%);
   color: #fff;
   box-shadow: 0 18px 38px rgba(136, 68, 197, 0.18);
   padding: 12px 18px;
@@ -160,26 +159,25 @@
   box-shadow: 0 28px 60px rgba(136, 68, 197, 0.22);
 }
 
-/* Warm green action (for Run Analysis/Download report mapping) */
-.action-green {
-  background: linear-gradient(90deg, #34d399 0%, #10b981 100%);
-  box-shadow: 0 14px 36px rgba(16, 185, 129, 0.12);
+/* Warm variant for other action buttons (keeps same family but slightly different tone) */
+.action-warm-1 {
+  background: linear-gradient(90deg, #ff9a52 0%, #ff5c7a 50%, #b24fb2 100%);
+  box-shadow: 0 14px 36px rgba(194, 75, 140, 0.12);
 }
 
-.action-green:hover:not(:disabled) {
+.action-warm-1:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 22px 46px rgba(16, 185, 129, 0.16);
+  box-shadow: 0 22px 46px rgba(194, 75, 140, 0.16);
 }
 
-/* Warm sky/blue-ish for CSV etc but softened towards magenta */
-.action-sky {
-  background: linear-gradient(90deg, #ff8a80 0%, #ff6e7f 50%, #ff3b6b 100%); /* warm coral/pink */
-  box-shadow: 0 14px 36px rgba(255,77,146,0.10);
+.action-warm-2 {
+  background: linear-gradient(90deg, #ffbf6b 0%, #ff8aa1 50%, #c36aa8 100%);
+  box-shadow: 0 14px 36px rgba(208, 103, 146, 0.12);
 }
 
-.action-sky:hover:not(:disabled) {
+.action-warm-2:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 22px 46px rgba(255,77,146,0.14);
+  box-shadow: 0 22px 46px rgba(208, 103, 146, 0.16);
 }
 
 /* Secondary: soft translucent */
@@ -242,7 +240,6 @@
   box-shadow: 0 12px 36px rgba(11, 29, 65, 0.08);
 }
 
-/* slightly subdued look for auto annotations */
 .phrase-highlight.auto {
   opacity: 0.96;
   filter: saturate(0.95) brightness(1.02);
