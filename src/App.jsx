@@ -17,7 +17,7 @@ export default function App() {
 
   // phrase marking UI state
   const [phraseToMark, setPhraseToMark] = useState("");
-  const [phraseColor, setPhraseColor] = useState("#10b981"); // default green
+  const [phraseColor, setPhraseColor] = useState("#f58529"); // default warm gradient tone
 
   // -----------------------------
   // Handle typing + history tracking
@@ -231,7 +231,7 @@ export default function App() {
               onChange={(e) => setPhraseColor(e.target.value)}
               title="Pick color for phrase highlight"
             />
-            <button className="action-btn action-green" onClick={markPhrase} disabled={!phraseToMark.trim()}>
+            <button className="action-btn action-ig" onClick={markPhrase} disabled={!phraseToMark.trim()}>
               Mark Phrase
             </button>
           </div>
@@ -246,7 +246,7 @@ export default function App() {
           </label>
 
           <button
-            className="action-btn action-green"
+            className="action-btn action-ig"
             onClick={startReplay}
             disabled={replaying || history.length === 0}
           >
@@ -254,7 +254,7 @@ export default function App() {
           </button>
 
           <button
-            className="action-btn action-sky"
+            className="action-btn action-warm-2"
             onClick={runAnalysis}
             disabled={history.length === 0}
           >
