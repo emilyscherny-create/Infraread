@@ -1,8 +1,14 @@
-// autoAnnotate — updated to use keyphrase extraction (client-side) as primary
-// source of candidate phrases. Keeps the connotation lexicon and color mapping.
-// Exports: computeConnotationScoresForWords, scoreToColor, autoAnnotateText
+// autoAnnotate — integrates LLM-based extractor (server) as an option.
+// Exports:
+// - computeConnotationScoresForWords(words)
+// - scoreToColor(score)
+// - autoAnnotateText(text, userHeatMap)  // synchronous fallback/local annotator
+// - fetchLLMAnnotations(text)             // async: calls server /api/extract-phrases
 
-import { extractKeyPhrases } from "./keyphrase";
+// NOTE: keep this file client-side only. The server endpoint (api/extract-phrases.js)
+// makes the external OpenAI call so your API key stays server-side.
+
+import { extractKeyPhrases } from "./keyphrase"; // optional local fallback
 
 const LEXICON = {
   // Positive
@@ -81,7 +87,8 @@ export function scoreToColor(score) {
   }
 }
 
-// Compute connotation scores for words/phrases using LEXICON (exact-match or average)
+// Compute connotation scores for an array of words/phrases.
+// Returns Map(lowercase -> score in [-1,1])
 export function computeConnotationScoresForWords(words) {
   const out = new Map();
   if (!words || words.length === 0) return out;
@@ -92,6 +99,7 @@ export function computeConnotationScoresForWords(words) {
       out.set(w, normalizeScore(LEXICON[w]));
       continue;
     }
+    // Fallback: split and average known token scores
     const parts = w.split(/\s+/).filter(Boolean);
     let total = 0;
     let count = 0;
@@ -107,20 +115,15 @@ export function computeConnotationScoresForWords(words) {
   return out;
 }
 
-// Main: auto-annotate text
-// Strategy:
-// 1) Run keyphrase extractor to find salient phrases (unigrams/bigrams/trigrams).
-// 2) Score those phrases with computeConnotationScoresForWords (fallback to 0).
-// 3) If extractor finds nothing, fall back to previous simple unigram+bigram scan.
+// Synchronous local annotator (fallback) — similar to before.
 export function autoAnnotateText(text = "", userHeatMap = []) {
   if (!text || typeof text !== "string") return [];
   const userSet = new Set((userHeatMap || []).map((u) => (u.phrase || "").toLowerCase()));
 
-  // 1) extract candidate phrases using keyphrase module
-  const kp = extractKeyPhrases(text, { maxN: 3, minScore: 0.35, minCount: 1 });
+  // Prefer candidate phrases from keyphrase extractor (local)
+  const kp = extractKeyPhrases ? extractKeyPhrases(text, { maxN: 3, minScore: 0.35, minCount: 1 }) : [];
   let candidates = kp.map((p) => p.phrase.toLowerCase());
 
-  // fallback: if keyphrase extractor produced no candidates, build simple candidates
   if (candidates.length === 0) {
     const reWord = /\w+/g;
     const wordList = [];
@@ -136,10 +139,7 @@ export function autoAnnotateText(text = "", userHeatMap = []) {
     candidates = Array.from(new Set(temp.map((w) => w.trim().toLowerCase()))).filter(Boolean);
   }
 
-  // compute connotation scores for candidates
   const scores = computeConnotationScoresForWords(candidates);
-
-  // placement/position boost for early phrases, and thresholding
   const THRESHOLD = 0.12;
   const out = [];
   for (const phrase of candidates) {
@@ -160,13 +160,47 @@ export function autoAnnotateText(text = "", userHeatMap = []) {
     }
   }
 
-  // sort longer phrases first for longest-match-first rendering
   out.sort((a, b) => b.phrase.length - a.phrase.length);
   return out;
+}
+
+// Async: call server /api/extract-phrases and map to the same shape
+export async function fetchLLMAnnotations(text = "", userHeatMap = []) {
+  if (!text || typeof text !== "string") return [];
+  try {
+    const resp = await fetch("/api/extract-phrases", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, max_phrases: 30 }),
+    });
+    if (!resp.ok) {
+      // fallback to local annotator
+      return autoAnnotateText(text, userHeatMap);
+    }
+    const j = await resp.json();
+    const phrases = Array.isArray(j?.phrases) ? j.phrases : [];
+    // remove user-set phrases
+    const userSet = new Set((userHeatMap || []).map((u) => (u.phrase || "").toLowerCase()));
+    const result = phrases
+      .map((p) => {
+        const phrase = String(p.phrase || "").trim().toLowerCase();
+        const score = typeof p.score === "number" ? normalizeScore(p.score) : 0;
+        if (!phrase || userSet.has(phrase)) return null;
+        return { phrase, score, color: scoreToColor(score) };
+      })
+      .filter(Boolean);
+    // sort longer phrases first
+    result.sort((a, b) => b.phrase.length - a.phrase.length);
+    return result;
+  } catch (e) {
+    // on error, fallback to client-only annotator
+    return autoAnnotateText(text, userHeatMap);
+  }
 }
 
 export default {
   computeConnotationScoresForWords,
   scoreToColor,
   autoAnnotateText,
+  fetchLLMAnnotations,
 };
