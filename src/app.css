@@ -40,6 +40,7 @@
 .editor-section {
   display: flex;
   flex-direction: column;
+  position: relative; /* ensure overlay positioning works */
 }
 
 .editor-input {
@@ -58,6 +59,8 @@
   color: #07183a;
   outline: none;
   transition: box-shadow 160ms ease, transform 160ms ease;
+  position: relative;
+  z-index: 2; /* ensure textarea is above overlay by default */
 }
 
 .editor-input:focus {
@@ -65,7 +68,7 @@
   transform: translateY(-2px);
 }
 
-/* heatmap output */
+/* heatmap output (when overlay is not used) */
 .heatmap-output {
   margin-top: 12px;
   padding: 14px;
@@ -233,6 +236,7 @@
   margin-right: 6px;
   transition: box-shadow 160ms ease, transform 160ms ease, opacity 160ms ease;
   border: 1px solid rgba(255,255,255,0.18);
+  background-clip: padding-box;
 }
 
 .phrase-highlight:hover {
@@ -307,4 +311,82 @@
     width: 100%;
     max-width: 100%;
   }
+}
+
+/* --------------------------
+   Live annotation highlight (currently-typed word)
+   -------------------------- */
+.phrase-highlight.live {
+  box-shadow: 0 8px 30px rgba(216, 120, 69, 0.18);
+  transform: translateY(-2px);
+  border: 1px solid rgba(255,255,255,0.12);
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+/* optional subtle pulse for very live feel */
+@keyframes livePulse {
+  0% { box-shadow: 0 6px 20px rgba(216, 120, 69, 0.12); }
+  50% { box-shadow: 0 14px 40px rgba(216, 120, 69, 0.18); }
+  100% { box-shadow: 0 6px 20px rgba(216, 120, 69, 0.12); }
+}
+.phrase-highlight.live.pulse {
+  animation: livePulse 1400ms ease-in-out infinite;
+}
+
+/* --------------------------
+   Overlay that mirrors textarea text and shows highlight backgrounds
+   -------------------------- */
+
+/* Ensure overlay container positioning (already set above) */
+.editor-section {
+  position: relative;
+}
+
+/* The overlay sits under the textarea and mirrors the text layout */
+.heatmap-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 22px; /* MUST match .editor-input padding */
+  pointer-events: none; /* allow clicks into the textarea */
+  z-index: 1; /* below textarea */
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow: auto; /* mirror textarea overflow */
+  color: transparent; /* hide overlay glyphs; we only want backgrounds */
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif; /* must match .editor-input */
+  font-size: 18px;
+  line-height: 1.75;
+  border-radius: 16px; /* match .editor-input */
+  box-sizing: border-box;
+}
+
+/* Bring textarea above overlay and make its background transparent so overlay color shows through */
+.editor-input {
+  position: relative;
+  z-index: 2;
+  background: transparent !important; /* let overlay colors be visible under the text */
+  color: #07183a; /* keep visible text color */
+}
+
+/* Ensure the overlay’s highlight spans show their background even though text is hidden */
+.phrase-highlight,
+.plain-word,
+.plain-char {
+  display: inline-block;
+  background-clip: padding-box; /* ensure background respects borders */
+  color: transparent; /* hide overlay glyphs themselves */
+}
+
+/* stronger border for auto annotations so pale backgrounds still read */
+.phrase-highlight.auto {
+  box-shadow: inset 0 0 0 1px rgba(11,29,65,0.04);
+}
+
+/* Live highlight lift on overlay */
+.phrase-highlight.live {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(11, 29, 65, 0.06);
 }
