@@ -390,3 +390,64 @@
   transform: translateY(-1px);
   box-shadow: 0 6px 18px rgba(11, 29, 65, 0.06);
 }
+
+/* =========================
+   Overlay alignment fixes (scoped)
+   These rules make overlay text layout match the textarea glyph layout
+   exactly so highlights line up with the caret (no phantom offsets).
+   ========================= */
+
+.heatmap-overlay {
+  /* ensure metrics match the editor-input exactly */
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  font-size: 18px;
+  line-height: 1.75;
+  letter-spacing: normal;
+  word-spacing: normal;
+  white-space: pre-wrap;
+  word-break: normal;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Make overlay spans behave exactly like inline text (no extra spacing) */
+.heatmap-overlay .phrase-highlight,
+.heatmap-overlay .plain-word,
+.heatmap-overlay .plain-char {
+  display: inline;        /* don't use inline-block here */
+  margin: 0 !important;   /* cancel theme margins that break alignment */
+  padding: 0 !important;  /* avoid padding that widens spans */
+  vertical-align: baseline;
+  color: transparent;     /* the textarea glyphs (above) remain visible */
+  background-clip: padding-box;
+  box-decoration-break: clone; /* keep backgrounds consistent across line breaks */
+}
+
+/* Apply the colored background but keep it tight to the text */
+.heatmap-overlay .phrase-highlight {
+  /* tiny horizontal padding for readability without shifting layout */
+  padding-left: 2px;
+  padding-right: 2px;
+  border-radius: 6px;
+  /* no transform that shifts position */
+  transform: none;
+  /* subtle shadow only (non-layout-affecting) */
+  box-shadow: none;
+}
+
+/* Ensure the overlay doesn't add extra spacing for plain words */
+.heatmap-overlay .plain-word {
+  margin-right: 0; /* override any theme margin-right so spacing matches textarea */
+}
+
+/* Keep live highlight subtle but aligned */
+.heatmap-overlay .phrase-highlight.live {
+  transform: none; /* avoid translate/shift that breaks alignment */
+  box-shadow: 0 6px 18px rgba(11, 29, 65, 0.06);
+}
+
+/* Extra precaution: ensure overlay spans don't introduce line-height differences */
+.heatmap-overlay span {
+  line-height: 1.75;
+  font-size: 18px;
+}
