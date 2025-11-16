@@ -1,15 +1,8 @@
-// Lightweight client-side connotation annotator (no external deps).
-// Exports:
-// - computeConnotationScoresForWords(words: string[]) => Map(lowercase -> score in [-1,1])
-// - scoreToColor(score: number) => CSS color string (rgba) — GOLD <-> INDIGO scale
-// - autoAnnotateText(text: string, userHeatMap: Array<{phrase,color}>) => Array<{phrase,color,score}>
-//
-// Notes:
-// - This version produces higher-contrast RGBA background colors that go from
-//   warm gold (positive) to indigo (negative). It also applies a small placement
-//   boost: phrases earlier in the text get a slight intensity boost (tunable).
-// - The returned objects include `score` as well as `color` so you can debug or
-//   tune the UI.
+// autoAnnotate — updated to use keyphrase extraction (client-side) as primary
+// source of candidate phrases. Keeps the connotation lexicon and color mapping.
+// Exports: computeConnotationScoresForWords, scoreToColor, autoAnnotateText
+
+import { extractKeyPhrases } from "./keyphrase";
 
 const LEXICON = {
   // Positive
@@ -43,7 +36,6 @@ function normalizeScore(raw) {
   return Math.max(-1, Math.min(1, raw));
 }
 
-// Helpers: hex <-> rgb, lerp color
 function hexToRgb(hex) {
   const hx = hex.replace("#", "");
   const bigint = parseInt(hx, 16);
@@ -67,37 +59,29 @@ function lerpColor(a, b, t) {
   return rgbToHex(r, g, bl);
 }
 
-// Score -> RGBA color on GOLD <-> INDIGO scale
-// Positive scores -> warm golds; Negative scores -> indigo shades.
-// Neutral -> transparent (no background).
+// GOLD <-> INDIGO scale (RGBA)
 export function scoreToColor(score) {
   const s = normalizeScore(score);
   if (s === 0) return "transparent";
 
-  // Positive scale: pale warm -> deep gold
-  const goldStart = "#fff9e6"; // very pale warm
-  const goldEnd = "#ffbf3b"; // warm gold
-
-  // Negative scale: pale cool -> deep indigo
-  const indigoStart = "#eef2ff"; // very pale indigo
-  const indigoEnd = "#4f46e5"; // indigo
+  const goldStart = "#fff9e6";
+  const goldEnd = "#ffbf3b";
+  const indigoStart = "#eef2ff";
+  const indigoEnd = "#4f46e5";
 
   if (s > 0) {
-    // map (0..1) to (goldStart..goldEnd) and return a visible alpha
     const hex = lerpColor(goldStart, goldEnd, s);
-    // use slightly lower alpha for small scores, stronger for high scores
-    const alpha = 0.6 + 0.35 * s; // range ~0.6..0.95
+    const alpha = 0.6 + 0.35 * s;
     return rgbToRgbaString(hexToRgb(hex), alpha);
   } else {
-    const t = -s; // 0..1
+    const t = -s;
     const hex = lerpColor(indigoStart, indigoEnd, t);
-    const alpha = 0.6 + 0.3 * t; // range ~0.6..0.9
+    const alpha = 0.6 + 0.3 * t;
     return rgbToRgbaString(hexToRgb(hex), alpha);
   }
 }
 
-// Compute connotation scores for an array of words/phrases.
-// Returns Map(lowercase -> score in [-1,1])
+// Compute connotation scores for words/phrases using LEXICON (exact-match or average)
 export function computeConnotationScoresForWords(words) {
   const out = new Map();
   if (!words || words.length === 0) return out;
@@ -108,7 +92,6 @@ export function computeConnotationScoresForWords(words) {
       out.set(w, normalizeScore(LEXICON[w]));
       continue;
     }
-    // Fallback: split and average known token scores
     const parts = w.split(/\s+/).filter(Boolean);
     let total = 0;
     let count = 0;
@@ -124,56 +107,60 @@ export function computeConnotationScoresForWords(words) {
   return out;
 }
 
-// Scan text and return auto-annotations
-// - text: the whole editor text
-// - userHeatMap: array of user-marked phrases {phrase,color}
-// returns array of { phrase, color, score }
+// Main: auto-annotate text
+// Strategy:
+// 1) Run keyphrase extractor to find salient phrases (unigrams/bigrams/trigrams).
+// 2) Score those phrases with computeConnotationScoresForWords (fallback to 0).
+// 3) If extractor finds nothing, fall back to previous simple unigram+bigram scan.
 export function autoAnnotateText(text = "", userHeatMap = []) {
   if (!text || typeof text !== "string") return [];
   const userSet = new Set((userHeatMap || []).map((u) => (u.phrase || "").toLowerCase()));
 
-  // Tokenization: capture words and build unigram + bigram candidates
-  const reWord = /\w+/g;
-  const wordList = [];
-  let m;
-  while ((m = reWord.exec(text)) !== null) {
-    wordList.push(m[0]);
+  // 1) extract candidate phrases using keyphrase module
+  const kp = extractKeyPhrases(text, { maxN: 3, minScore: 0.35, minCount: 1 });
+  let candidates = kp.map((p) => p.phrase.toLowerCase());
+
+  // fallback: if keyphrase extractor produced no candidates, build simple candidates
+  if (candidates.length === 0) {
+    const reWord = /\w+/g;
+    const wordList = [];
+    let m;
+    while ((m = reWord.exec(text)) !== null) {
+      wordList.push(m[0]);
+    }
+    const temp = [];
+    for (let i = 0; i < wordList.length; i++) {
+      temp.push(wordList[i]);
+      if (i + 1 < wordList.length) temp.push(`${wordList[i]} ${wordList[i + 1]}`);
+    }
+    candidates = Array.from(new Set(temp.map((w) => w.trim().toLowerCase()))).filter(Boolean);
   }
 
-  const candidates = [];
-  for (let i = 0; i < wordList.length; i++) {
-    candidates.push(wordList[i]);
-    if (i + 1 < wordList.length) candidates.push(`${wordList[i]} ${wordList[i + 1]}`);
-  }
+  // compute connotation scores for candidates
+  const scores = computeConnotationScoresForWords(candidates);
 
-  const candidateSet = Array.from(new Set(candidates.map((w) => w.trim().toLowerCase()))).filter(Boolean);
-  const baseScores = computeConnotationScoresForWords(candidateSet);
-
-  const THRESHOLD = 0.12; // lower threshold to pick up more candidates
+  // placement/position boost for early phrases, and thresholding
+  const THRESHOLD = 0.12;
   const out = [];
-
-  for (const [phrase, baseScore] of baseScores.entries()) {
+  for (const phrase of candidates) {
     if (!phrase) continue;
     if (userSet.has(phrase)) continue;
+    const baseScore = scores.get(phrase) || 0;
 
-    // placement/position boost: phrases earlier in the text get a slight boost.
-    // find first occurrence index (fallback to -1)
+    // placement boost
     const idx = text.toLowerCase().indexOf(phrase);
     let posBoost = 0;
     if (idx >= 0 && text.length > 0) {
-      const normalizedPos = idx / Math.max(1, text.length); // 0..1
-      // earlier phrases -> boost up to +12%, later phrases no boost
+      const normalizedPos = idx / Math.max(1, text.length);
       posBoost = 0.12 * (1 - normalizedPos);
     }
-
     const finalScore = normalizeScore(baseScore * (1 + posBoost));
-
     if (Math.abs(finalScore) >= THRESHOLD) {
       out.push({ phrase, color: scoreToColor(finalScore), score: finalScore });
     }
   }
 
-  // Sort longer phrases first to help longest-match-first rendering
+  // sort longer phrases first for longest-match-first rendering
   out.sort((a, b) => b.phrase.length - a.phrase.length);
   return out;
 }
