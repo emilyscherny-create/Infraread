@@ -1,11 +1,15 @@
 // Lightweight client-side connotation annotator (no external deps).
 // Exports:
 // - computeConnotationScoresForWords(words: string[]) => Map(lowercase -> score in [-1,1])
-// - scoreToColor(score: number) => CSS color string
-// - autoAnnotateText(text: string, userHeatMap: Array<{phrase,color}>) => Array<{phrase,color}>
+// - scoreToColor(score: number) => CSS color string (rgba) — GOLD <-> INDIGO scale
+// - autoAnnotateText(text: string, userHeatMap: Array<{phrase,color}>) => Array<{phrase,color,score}>
 //
-// This file is intentionally small and self-contained. It focuses on stronger,
-// higher-contrast background colors so highlights are visible on the current theme.
+// Notes:
+// - This version produces higher-contrast RGBA background colors that go from
+//   warm gold (positive) to indigo (negative). It also applies a small placement
+//   boost: phrases earlier in the text get a slight intensity boost (tunable).
+// - The returned objects include `score` as well as `color` so you can debug or
+//   tune the UI.
 
 const LEXICON = {
   // Positive
@@ -39,19 +43,7 @@ function normalizeScore(raw) {
   return Math.max(-1, Math.min(1, raw));
 }
 
-// Stronger, higher-contrast palette so backgrounds are visible on the app panel.
-// Negative => reds/oranges, Neutral => transparent (no highlight), Positive => warm golds.
-export function scoreToColor(score) {
-  const s = normalizeScore(score);
-  if (s <= -0.75) return "#ff3b2e"; // very negative (bright red)
-  if (s <= -0.35) return "#ff7a5f"; // negative
-  if (s < 0) return "#ffc9b8"; // mild negative
-  if (s === 0) return "transparent"; // neutral -> no background
-  if (s < 0.35) return "#fff0c9"; // mild positive (pale warm)
-  if (s < 0.75) return "#ffd66b"; // positive
-  return "#ffbf3b"; // very positive (warm gold)
-}
-
+// Helpers: hex <-> rgb, lerp color
 function hexToRgb(hex) {
   const hx = hex.replace("#", "");
   const bigint = parseInt(hx, 16);
@@ -60,11 +52,12 @@ function hexToRgb(hex) {
   }
   return { r: 255, g: 255, b: 255 };
 }
-
+function rgbToRgbaString({ r, g, b }, a = 1) {
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
 function rgbToHex(r, g, b) {
   return "#" + [r, g, b].map((x) => x.toString(16).padStart(2, "0")).join("");
 }
-
 function lerpColor(a, b, t) {
   const ca = hexToRgb(a);
   const cb = hexToRgb(b);
@@ -72,6 +65,35 @@ function lerpColor(a, b, t) {
   const g = Math.round(ca.g + (cb.g - ca.g) * t);
   const bl = Math.round(ca.b + (cb.b - ca.b) * t);
   return rgbToHex(r, g, bl);
+}
+
+// Score -> RGBA color on GOLD <-> INDIGO scale
+// Positive scores -> warm golds; Negative scores -> indigo shades.
+// Neutral -> transparent (no background).
+export function scoreToColor(score) {
+  const s = normalizeScore(score);
+  if (s === 0) return "transparent";
+
+  // Positive scale: pale warm -> deep gold
+  const goldStart = "#fff9e6"; // very pale warm
+  const goldEnd = "#ffbf3b"; // warm gold
+
+  // Negative scale: pale cool -> deep indigo
+  const indigoStart = "#eef2ff"; // very pale indigo
+  const indigoEnd = "#4f46e5"; // indigo
+
+  if (s > 0) {
+    // map (0..1) to (goldStart..goldEnd) and return a visible alpha
+    const hex = lerpColor(goldStart, goldEnd, s);
+    // use slightly lower alpha for small scores, stronger for high scores
+    const alpha = 0.6 + 0.35 * s; // range ~0.6..0.95
+    return rgbToRgbaString(hexToRgb(hex), alpha);
+  } else {
+    const t = -s; // 0..1
+    const hex = lerpColor(indigoStart, indigoEnd, t);
+    const alpha = 0.6 + 0.3 * t; // range ~0.6..0.9
+    return rgbToRgbaString(hexToRgb(hex), alpha);
+  }
 }
 
 // Compute connotation scores for an array of words/phrases.
@@ -105,11 +127,12 @@ export function computeConnotationScoresForWords(words) {
 // Scan text and return auto-annotations
 // - text: the whole editor text
 // - userHeatMap: array of user-marked phrases {phrase,color}
+// returns array of { phrase, color, score }
 export function autoAnnotateText(text = "", userHeatMap = []) {
   if (!text || typeof text !== "string") return [];
   const userSet = new Set((userHeatMap || []).map((u) => (u.phrase || "").toLowerCase()));
 
-  // Tokenization: get words (alphanumeric) and build unigram + bigram candidates
+  // Tokenization: capture words and build unigram + bigram candidates
   const reWord = /\w+/g;
   const wordList = [];
   let m;
@@ -124,15 +147,29 @@ export function autoAnnotateText(text = "", userHeatMap = []) {
   }
 
   const candidateSet = Array.from(new Set(candidates.map((w) => w.trim().toLowerCase()))).filter(Boolean);
-  const scores = computeConnotationScoresForWords(candidateSet);
+  const baseScores = computeConnotationScoresForWords(candidateSet);
 
-  const THRESHOLD = 0.18; // tuneable threshold for visibility
+  const THRESHOLD = 0.12; // lower threshold to pick up more candidates
   const out = [];
-  for (const [phrase, score] of scores.entries()) {
+
+  for (const [phrase, baseScore] of baseScores.entries()) {
     if (!phrase) continue;
     if (userSet.has(phrase)) continue;
-    if (Math.abs(score) >= THRESHOLD) {
-      out.push({ phrase, color: scoreToColor(score), score });
+
+    // placement/position boost: phrases earlier in the text get a slight boost.
+    // find first occurrence index (fallback to -1)
+    const idx = text.toLowerCase().indexOf(phrase);
+    let posBoost = 0;
+    if (idx >= 0 && text.length > 0) {
+      const normalizedPos = idx / Math.max(1, text.length); // 0..1
+      // earlier phrases -> boost up to +12%, later phrases no boost
+      posBoost = 0.12 * (1 - normalizedPos);
+    }
+
+    const finalScore = normalizeScore(baseScore * (1 + posBoost));
+
+    if (Math.abs(finalScore) >= THRESHOLD) {
+      out.push({ phrase, color: scoreToColor(finalScore), score: finalScore });
     }
   }
 
@@ -141,7 +178,6 @@ export function autoAnnotateText(text = "", userHeatMap = []) {
   return out;
 }
 
-// default export for convenience
 export default {
   computeConnotationScoresForWords,
   scoreToColor,
