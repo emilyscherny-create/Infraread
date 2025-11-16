@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import "./app.css";
 import Dashboard from "./InfrareadDashboard.jsx";
 import Translator from "./Translator.jsx";
@@ -9,13 +9,14 @@ export default function App() {
   const [heatMap, setHeatMap] = useState([]); // user-marked phrases
   const [autoAnnotations, setAutoAnnotations] = useState([]); // generated automatically
   const [autoAnnotateEnabled, setAutoAnnotateEnabled] = useState(false);
-  const [autoLiveEnabled, setAutoLiveEnabled] = useState(true); // new: live updates while typing
+  const [autoLiveEnabled, setAutoLiveEnabled] = useState(true); // live updates while typing
 
   const [replaying, setReplaying] = useState(false);
   const [replayIndex, setReplayIndex] = useState(0);
   const [history, setHistory] = useState([]);
   const [analysis, setAnalysis] = useState(null);
   const textboxRef = useRef(null);
+  const overlayRef = useRef(null);
 
   // phrase marking UI state
   const [phraseToMark, setPhraseToMark] = useState("");
@@ -32,8 +33,15 @@ export default function App() {
     const time = typeof performance !== "undefined" && performance.now ? performance.now() : Date.now();
     setHistory((prev) => [...prev, { value: newValue, time }]);
     setText(newValue);
-    // if live enabled we rely on the debounced effect below to recompute annotations
+    // overlay scroll sync will be handled by onScroll
   };
+
+  function handleScroll(e) {
+    if (overlayRef.current) {
+      overlayRef.current.scrollTop = e.target.scrollTop;
+      overlayRef.current.scrollLeft = e.target.scrollLeft;
+    }
+  }
 
   // -----------------------------
   // Mark / unmark phrases (controls)
@@ -58,26 +66,23 @@ export default function App() {
   // Debounced for live typing; can also be computed on toggle
   // -----------------------------
   useEffect(() => {
-    // if auto annotation disabled, clear autos
     if (!autoAnnotateEnabled) {
       setAutoAnnotations([]);
       return;
     }
 
-    // If live mode is off, compute once (on toggle or on heatMap change)
     if (!autoLiveEnabled) {
       const autos = autoAnnotateText(text, heatMap);
       setAutoAnnotations(autos);
       return;
     }
 
-    // Live mode: debounce updates to avoid excess work
     if (liveTimerRef.current) clearTimeout(liveTimerRef.current);
     liveTimerRef.current = setTimeout(() => {
       const autos = autoAnnotateText(text, heatMap);
       setAutoAnnotations(autos);
       liveTimerRef.current = null;
-    }, 180); // ~180ms debounce; tweak as desired
+    }, 180); // debounce for responsiveness
 
     return () => {
       if (liveTimerRef.current) clearTimeout(liveTimerRef.current);
@@ -96,17 +101,26 @@ export default function App() {
     const len = src.length;
 
     // Prepare user-set annotation set (highest priority)
-    const userAnns = heatMap.map((a) => ({ phrase: a.phrase, phraseLower: a.phrase.toLowerCase(), color: a.color, source: "user" }));
+    const userAnns = heatMap.map((a) => ({
+      phrase: a.phrase,
+      phraseLower: a.phrase.toLowerCase(),
+      color: a.color,
+      source: "user",
+    }));
 
     // Prepare auto annotations (lowest priority)
-    const autoAnns = (autoAnnotations || []).map((a) => ({ phrase: a.phrase, phraseLower: a.phrase.toLowerCase(), color: a.color, source: "auto" }));
+    const autoAnns = (autoAnnotations || []).map((a) => ({
+      phrase: a.phrase,
+      phraseLower: a.phrase.toLowerCase(),
+      color: a.color,
+      source: "auto",
+    }));
 
     // Compute current caret/selection-based live annotation (if live enabled)
     let liveAnn = null;
     try {
       const caret = textboxRef.current?.selectionStart ?? -1;
       if (autoAnnotateEnabled && autoLiveEnabled && caret >= 0) {
-        // find current word boundaries around caret
         let s = caret;
         while (s > 0 && !/\s/.test(src[s - 1])) s -= 1;
         let e = caret;
@@ -114,10 +128,8 @@ export default function App() {
         const current = src.substring(s, e).trim();
         if (current) {
           const low = current.toLowerCase();
-          // respect user annotations: don't create live ann if user already marked exact phrase
           const userPhrasesLower = new Set(userAnns.map((u) => u.phraseLower));
           if (!userPhrasesLower.has(low)) {
-            // compute score for this token using computeConnotationScoresForWords
             const scoreMap = computeConnotationScoresForWords([current]);
             const score = scoreMap.get(low) || 0;
             const color = scoreToColor(score);
@@ -126,7 +138,7 @@ export default function App() {
         }
       }
     } catch (e) {
-      // ignore caret/selection errors
+      // ignore caret errors
     }
 
     // Merge annotations with priority ordering for matching:
@@ -147,7 +159,11 @@ export default function App() {
     while (i < len) {
       // whitespace -> copy as-is
       if (/\s/.test(src[i])) {
-        out.push(<span key={i} className="plain-char">{src[i]}</span>);
+        out.push(
+          <span key={i} className="plain-char">
+            {src[i]}
+          </span>
+        );
         i += 1;
         continue;
       }
@@ -169,7 +185,6 @@ export default function App() {
             if (matchLen > best.matchLen) {
               best = { annotation: ann, matchLen };
             } else if (matchLen === best.matchLen) {
-              // tie: prefer annotation with higher precedence (user > live > auto)
               const curP = precedence[ann.source] || 0;
               const bestP = precedence[best.annotation.source] || 0;
               if (curP > bestP) best = { annotation: ann, matchLen };
@@ -181,7 +196,6 @@ export default function App() {
       if (best) {
         const matchedText = src.substr(i, best.matchLen);
         const style = { backgroundColor: best.annotation.color };
-        // add a class for live annotations so we can style them specially
         const cls = `phrase-highlight ${best.annotation.source === "auto" ? "auto" : best.annotation.source === "live" ? "live" : "user"}`;
         out.push(
           <span key={i} className={cls} style={style}>
@@ -196,7 +210,11 @@ export default function App() {
       let j = i;
       while (j < len && !/\s/.test(src[j])) j++;
       const piece = src.substring(i, j);
-      out.push(<span key={i} className="plain-word">{piece}</span>);
+      out.push(
+        <span key={i} className="plain-word">
+          {piece}
+        </span>
+      );
       i = j;
     }
 
@@ -222,10 +240,7 @@ export default function App() {
     }
 
     const frame = history[replayIndex];
-    const delay =
-      replayIndex === 0
-        ? 100
-        : frame.time - history[replayIndex - 1].time;
+    const delay = replayIndex === 0 ? 100 : frame.time - history[replayIndex - 1].time;
 
     const timer = setTimeout(() => {
       setText(frame.value);
@@ -279,18 +294,25 @@ export default function App() {
         <h1 className="infraread-title">Infraread</h1>
 
         <div className="editor-section">
+          {/* Mirror overlay - sits under the textarea and renders highlighted spans */}
+          <div ref={overlayRef} className="heatmap-overlay" aria-hidden="true">
+            {renderHeatText()}
+          </div>
+
           <textarea
             ref={textboxRef}
             className="editor-input"
             value={text}
             onChange={handleChange}
+            onScroll={handleScroll}
             disabled={replaying}
             placeholder="Start typing…"
           />
 
-          <div className="heatmap-output">
-            {renderHeatText()}
-          </div>
+          {/* small debug area when needed - uncomment to inspect annotations */}
+          {/* <pre style={{ marginTop: 6, fontSize: 12, color: "#444" }}>
+            {JSON.stringify({ heatMap, autoAnnotations, textLength: text.length }, null, 2)}
+          </pre> */}
         </div>
 
         <div className="controls-row">
@@ -314,36 +336,20 @@ export default function App() {
           </div>
 
           <label className="auto-toggle">
-            <input
-              type="checkbox"
-              checked={autoAnnotateEnabled}
-              onChange={(e) => setAutoAnnotateEnabled(e.target.checked)}
-            />{" "}
+            <input type="checkbox" checked={autoAnnotateEnabled} onChange={(e) => setAutoAnnotateEnabled(e.target.checked)} />{" "}
             Auto annotate (connotation)
           </label>
 
           <label className="auto-toggle">
-            <input
-              type="checkbox"
-              checked={autoLiveEnabled}
-              onChange={(e) => setAutoLiveEnabled(e.target.checked)}
-            />{" "}
+            <input type="checkbox" checked={autoLiveEnabled} onChange={(e) => setAutoLiveEnabled(e.target.checked)} />{" "}
             Live updates
           </label>
 
-          <button
-            className="action-btn action-ig"
-            onClick={startReplay}
-            disabled={replaying || history.length === 0}
-          >
+          <button className="action-btn action-ig" onClick={startReplay} disabled={replaying || history.length === 0}>
             Replay
           </button>
 
-          <button
-            className="action-btn action-warm-2"
-            onClick={runAnalysis}
-            disabled={history.length === 0}
-          >
+          <button className="action-btn action-warm-2" onClick={runAnalysis} disabled={history.length === 0}>
             Run Analysis
           </button>
         </div>
@@ -356,14 +362,15 @@ export default function App() {
                 <li key={i}>
                   <span className="legend-swatch" style={{ backgroundColor: a.color }} />{" "}
                   <span className="legend-text">{a.phrase}</span>{" "}
-                  <button className="small-remove" onClick={() => removeAnnotation(i)}>Remove</button>
+                  <button className="small-remove" onClick={() => removeAnnotation(i)}>
+                    Remove
+                  </button>
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        {/* TRANSLATOR */}
         <div style={{ marginTop: 18 }}>
           <Translator textboxRef={textboxRef} text={text} setText={setText} />
         </div>
